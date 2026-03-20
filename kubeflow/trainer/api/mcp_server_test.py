@@ -43,7 +43,22 @@ def test_list_tools_returns_supported_tools():
     trainer_client = Mock()
     mcp_server = TrainerMCPServer(trainer_client=trainer_client)
 
-    assert mcp_server.list_tools() == ["list_training_jobs", "get_training_job"]
+    assert mcp_server.list_tools() == ["list_training_jobs", "get_training_job", "delete_training_job"]
+def test_call_tool_delete_training_job_success_response_envelope():
+    trainer_client = Mock()
+    trainer_client.delete_job.return_value = None
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("delete_training_job", {"name": "example-trainjob"})
+    trainer_client.delete_job.assert_called_once_with(name="example-trainjob")
+    assert response["ok"] is True
+    assert response["result"] == {"deleted": "example-trainjob"}
+
+def test_call_tool_delete_training_job_missing_name_argument():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("delete_training_job", {})
+    assert response["ok"] is False
+    assert response["error"]["type"] == "ValueError"
 
 
 def test_list_training_jobs_without_runtime_filter():

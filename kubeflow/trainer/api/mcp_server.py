@@ -26,7 +26,7 @@ class TrainerMCPServer:
 
     def list_tools(self) -> list[str]:
         """List available Trainer MCP tools."""
-        return ["list_training_jobs", "get_training_job"]
+        return ["list_training_jobs", "get_training_job", "delete_training_job"]
 
     def call_tool(
         self,
@@ -65,8 +65,14 @@ class TrainerMCPServer:
                 name = arguments.get("name")
                 if not name:
                     raise ValueError("Tool 'get_training_job' requires argument 'name'.")
-
                 result = self.get_training_job(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "delete_training_job":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'delete_training_job' requires argument 'name'.")
+                result = self.delete_training_job(name=name)
                 return {"ok": True, "result": result}
 
             raise ValueError(f"Unsupported tool '{tool_name}'")
@@ -78,6 +84,17 @@ class TrainerMCPServer:
                     "message": str(error),
                 },
             }
+    def delete_training_job(self, name: str) -> dict[str, Any]:
+        """Delete a training job by name using ``TrainerClient``.
+
+        Args:
+            name: TrainJob name.
+
+        Returns:
+            Dictionary indicating deletion success.
+        """
+        self._trainer_client.delete_job(name=name)
+        return {"deleted": name}
 
     def list_training_jobs(self, runtime_name: str | None = None) -> dict[str, Any]:
         """List training jobs using ``TrainerClient``.
