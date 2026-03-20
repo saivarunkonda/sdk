@@ -11,8 +11,19 @@ class TrainerMCPServer:
     """MCP-oriented tool wrapper for Kubeflow Trainer APIs.
 
     This class provides a protocol-neutral scaffold for exposing Trainer APIs as
-    MCP tools. It starts with a first tool, ``list_training_jobs``, and can be
-    expanded incrementally with additional TrainJob lifecycle methods.
+    MCP tools, aligned with [KEP-936](https://github.com/kubeflow/community/pull/937).
+    It implements modular client loading (via `--clients` argument) and persona-based tool filtering,
+    as described in the official Kubeflow MCP proposal.
+
+    References:
+        - KEP-936: https://github.com/kubeflow/community/pull/937
+        - Proposal: kubeflow/community#937
+
+    Features:
+        - Modular client loading: tools are grouped by client (e.g., trainer, optimizer, hub).
+        - Persona filtering: tool access is filtered by persona (readonly, data-scientist, ml-engineer, platform-admin).
+        - Tool registry: tool names and signatures are aligned with the proposal.
+        - Protocol-neutral: no transport layer, agentic tool registry only.
     """
 
     def __init__(self, trainer_client: TrainerClient | None = None, persona: str = "ml-engineer", clients: list[str] = None):
@@ -38,6 +49,12 @@ class TrainerMCPServer:
             "delete_training_job",
             "fine_tune",
             "run_custom_training",
+            "suspend_training_job",
+            "resume_training_job",
+            "checkpoint_training_job",
+            "restart_training_job",
+            "get_training_job_logs",
+            "get_training_job_metrics",
         ],
         # "optimizer": [ ... ],
         # "hub": [ ... ],
@@ -58,6 +75,8 @@ class TrainerMCPServer:
             "check_prerequisites",
             "fine_tune",
             "run_custom_training",
+            "get_training_job_logs",
+            "get_training_job_metrics",
         ],
         "ml-engineer": [
             "list_training_jobs",
@@ -67,6 +86,12 @@ class TrainerMCPServer:
             "delete_training_job",
             "fine_tune",
             "run_custom_training",
+            "suspend_training_job",
+            "resume_training_job",
+            "checkpoint_training_job",
+            "restart_training_job",
+            "get_training_job_logs",
+            "get_training_job_metrics",
         ],
         "platform-admin": [
             "list_training_jobs",
@@ -76,8 +101,43 @@ class TrainerMCPServer:
             "delete_training_job",
             "fine_tune",
             "run_custom_training",
+            "suspend_training_job",
+            "resume_training_job",
+            "checkpoint_training_job",
+            "restart_training_job",
+            "get_training_job_logs",
+            "get_training_job_metrics",
         ],
     }
+    def suspend_training_job(self, name: str) -> dict[str, Any]:
+        """Stub for suspending a training job."""
+        # TODO: Implement actual suspend logic
+        return {"suspended": name}
+
+    def resume_training_job(self, name: str) -> dict[str, Any]:
+        """Stub for resuming a training job."""
+        # TODO: Implement actual resume logic
+        return {"resumed": name}
+
+    def checkpoint_training_job(self, name: str) -> dict[str, Any]:
+        """Stub for checkpointing a training job."""
+        # TODO: Implement actual checkpoint logic
+        return {"checkpointed": name}
+
+    def restart_training_job(self, name: str) -> dict[str, Any]:
+        """Stub for restarting a training job."""
+        # TODO: Implement actual restart logic
+        return {"restarted": name}
+
+    def get_training_job_logs(self, name: str) -> dict[str, Any]:
+        """Stub for retrieving training job logs."""
+        # TODO: Implement actual log retrieval
+        return {"logs": f"Logs for job {name} (Stub)"}
+
+    def get_training_job_metrics(self, name: str) -> dict[str, Any]:
+        """Stub for retrieving training job metrics."""
+        # TODO: Implement actual metrics retrieval
+        return {"metrics": {"accuracy": 0.95, "loss": 0.1}}
     def fine_tune(self, model_name: str, dataset_path: str, epochs: int = 3, learning_rate: float = 1e-4) -> dict[str, Any]:
         """Stub for fine-tuning a model. Replace with actual SDK logic."""
         # TODO: Implement using TrainerClient fine-tune API
@@ -187,6 +247,48 @@ class TrainerMCPServer:
                 if not func_code:
                     raise ValueError("Tool 'run_custom_training' requires argument 'func_code'.")
                 result = self.run_custom_training(func_code, requirements)
+                return {"ok": True, "result": result}
+
+            if tool_name == "suspend_training_job":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'suspend_training_job' requires argument 'name'.")
+                result = self.suspend_training_job(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "resume_training_job":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'resume_training_job' requires argument 'name'.")
+                result = self.resume_training_job(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "checkpoint_training_job":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'checkpoint_training_job' requires argument 'name'.")
+                result = self.checkpoint_training_job(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "restart_training_job":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'restart_training_job' requires argument 'name'.")
+                result = self.restart_training_job(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "get_training_job_logs":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'get_training_job_logs' requires argument 'name'.")
+                result = self.get_training_job_logs(name=name)
+                return {"ok": True, "result": result}
+
+            if tool_name == "get_training_job_metrics":
+                name = arguments.get("name")
+                if not name:
+                    raise ValueError("Tool 'get_training_job_metrics' requires argument 'name'.")
+                result = self.get_training_job_metrics(name=name)
                 return {"ok": True, "result": result}
 
             raise ValueError(f"Unsupported tool '{tool_name}'")

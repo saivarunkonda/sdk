@@ -1,3 +1,46 @@
+def test_call_tool_suspend_training_job():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("suspend_training_job", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    assert response["result"] == {"suspended": "example-trainjob"}
+
+def test_call_tool_resume_training_job():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("resume_training_job", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    assert response["result"] == {"resumed": "example-trainjob"}
+
+def test_call_tool_checkpoint_training_job():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("checkpoint_training_job", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    assert response["result"] == {"checkpointed": "example-trainjob"}
+
+def test_call_tool_restart_training_job():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("restart_training_job", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    assert response["result"] == {"restarted": "example-trainjob"}
+
+def test_call_tool_get_training_job_logs():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("get_training_job_logs", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    assert "Logs for job example-trainjob" in response["result"]["logs"]
+
+def test_call_tool_get_training_job_metrics():
+    trainer_client = Mock()
+    mcp_server = TrainerMCPServer(trainer_client=trainer_client)
+    response = mcp_server.call_tool("get_training_job_metrics", {"name": "example-trainjob"})
+    assert response["ok"] is True
+    metrics = response["result"]["metrics"]
+    assert "accuracy" in metrics
+    assert "loss" in metrics
 from datetime import datetime
 import os
 import sys
