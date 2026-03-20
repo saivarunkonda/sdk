@@ -26,7 +26,12 @@ class TrainerMCPServer:
         - Protocol-neutral: no transport layer, agentic tool registry only.
     """
 
-    def __init__(self, trainer_client: TrainerClient | None = None, persona: str = "ml-engineer", clients: list[str] = None):
+    def __init__(
+        self,
+        trainer_client: TrainerClient | None = None,
+        persona: str = "ml-engineer",
+        clients: list[str] = None,
+    ):
         """Initialize the MCP server wrapper.
 
         Args:
@@ -56,8 +61,19 @@ class TrainerMCPServer:
             "get_training_job_logs",
             "get_training_job_metrics",
         ],
-        # "optimizer": [ ... ],
-        # "hub": [ ... ],
+        "optimizer": [
+            "list_optimization_jobs",
+            "get_optimization_job",
+            "delete_optimization_job",
+            "start_optimization_job",
+            "stop_optimization_job",
+        ],
+        "hub": [
+            "list_models",
+            "get_model",
+            "register_model",
+            "delete_model",
+        ],
     }
 
     # Persona tool map based on KEP-936 (tools must also be enabled by client)
@@ -109,36 +125,58 @@ class TrainerMCPServer:
             "get_training_job_metrics",
         ],
     }
+
     def suspend_training_job(self, name: str) -> dict[str, Any]:
-        """Stub for suspending a training job."""
-        # TODO: Implement actual suspend logic
+        """Suspend a training job using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        self._trainer_client.suspend_job(name=name)
         return {"suspended": name}
 
     def resume_training_job(self, name: str) -> dict[str, Any]:
-        """Stub for resuming a training job."""
-        # TODO: Implement actual resume logic
+        """Resume a training job using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        self._trainer_client.resume_job(name=name)
         return {"resumed": name}
 
     def checkpoint_training_job(self, name: str) -> dict[str, Any]:
-        """Stub for checkpointing a training job."""
-        # TODO: Implement actual checkpoint logic
+        """Checkpoint a training job using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        self._trainer_client.checkpoint_job(name=name)
         return {"checkpointed": name}
 
     def restart_training_job(self, name: str) -> dict[str, Any]:
-        """Stub for restarting a training job."""
-        # TODO: Implement actual restart logic
+        """Restart a training job using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        self._trainer_client.restart_job(name=name)
         return {"restarted": name}
 
     def get_training_job_logs(self, name: str) -> dict[str, Any]:
-        """Stub for retrieving training job logs."""
-        # TODO: Implement actual log retrieval
-        return {"logs": f"Logs for job {name} (Stub)"}
+        """Retrieve training job logs using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        logs = self._trainer_client.get_job_logs(name=name)
+        return {"logs": logs}
 
     def get_training_job_metrics(self, name: str) -> dict[str, Any]:
-        """Stub for retrieving training job metrics."""
-        # TODO: Implement actual metrics retrieval
-        return {"metrics": {"accuracy": 0.95, "loss": 0.1}}
-    def fine_tune(self, model_name: str, dataset_path: str, epochs: int = 3, learning_rate: float = 1e-4) -> dict[str, Any]:
+        """Retrieve training job metrics using TrainerClient.
+
+        Implements real logic as per KEP-936 proposal.
+        """
+        metrics = self._trainer_client.get_job_metrics(name=name)
+        return {"metrics": metrics}
+
+    def fine_tune(
+        self, model_name: str, dataset_path: str, epochs: int = 3, learning_rate: float = 1e-4
+    ) -> dict[str, Any]:
         """Stub for fine-tuning a model. Replace with actual SDK logic."""
         # TODO: Implement using TrainerClient fine-tune API
         return {
@@ -148,14 +186,14 @@ class TrainerMCPServer:
     def run_custom_training(self, func_code: str, requirements: list[str] = None) -> dict[str, Any]:
         """Stub for running custom training code. Replace with secure execution logic per KEP-936."""
         # TODO: Implement secure code execution, AST checks, temp file handling
-        return {
-            "message": "Custom training job submitted (Stub)."
-        }
+        return {"message": "Custom training job submitted (Stub)."}
 
     def list_tools(self) -> list[str]:
         """List available Trainer MCP tools for the current persona and enabled clients, preserving test order."""
         # Use the order from _CLIENT_TOOLS["trainer"] as canonical
-        persona_tools = set(self._PERSONA_TOOLS.get(self._persona, self._PERSONA_TOOLS["ml-engineer"]))
+        persona_tools = set(
+            self._PERSONA_TOOLS.get(self._persona, self._PERSONA_TOOLS["ml-engineer"])
+        )
         client_tools = []
         for client in self._clients:
             client_tools.extend(self._CLIENT_TOOLS.get(client, []))
@@ -198,7 +236,9 @@ class TrainerMCPServer:
         try:
             allowed_tools = self.list_tools()
             if tool_name not in allowed_tools:
-                raise PermissionError(f"Persona '{self._persona}' is not allowed to use tool '{tool_name}'.")
+                raise PermissionError(
+                    f"Persona '{self._persona}' is not allowed to use tool '{tool_name}'."
+                )
 
             if tool_name == "list_training_jobs":
                 runtime_name = arguments.get("runtime_name")
@@ -237,7 +277,9 @@ class TrainerMCPServer:
                 epochs = arguments.get("epochs", 3)
                 learning_rate = arguments.get("learning_rate", 1e-4)
                 if not model_name or not dataset_path:
-                    raise ValueError("Tool 'fine_tune' requires arguments 'model_name' and 'dataset_path'.")
+                    raise ValueError(
+                        "Tool 'fine_tune' requires arguments 'model_name' and 'dataset_path'."
+                    )
                 result = self.fine_tune(model_name, dataset_path, epochs, learning_rate)
                 return {"ok": True, "result": result}
 
@@ -323,6 +365,7 @@ class TrainerMCPServer:
         # TODO: Add more checks (GPU, storage, etc.) as needed
         result["cluster_connectivity"] = True  # Assume True if runtimes can be listed
         return result
+
     def delete_training_job(self, name: str) -> dict[str, Any]:
         """Delete a training job by name using ``TrainerClient``.
 
@@ -393,3 +436,52 @@ class TrainerMCPServer:
             return [self._serialize_value(item) for item in value]
 
         return value
+
+    # Optimizer tool group
+    def list_optimizers(self, filters=None):
+        # Stub implementation: returns example optimizer list
+        return [
+            {"name": "Adam", "type": "gradient", "status": "available"},
+            {"name": "SGD", "type": "gradient", "status": "available"},
+        ]
+
+    def get_optimizer(self, optimizer_id):
+        # Stub implementation: returns example optimizer details
+        return {"id": optimizer_id, "name": "Adam", "type": "gradient", "params": {"lr": 0.001}}
+
+    def create_optimizer(self, optimizer_spec):
+        # Stub implementation: returns created optimizer spec
+        return {"id": "opt-123", "spec": optimizer_spec}
+
+    def update_optimizer(self, optimizer_id, optimizer_spec):
+        # Stub implementation: returns updated optimizer spec
+        return {"id": optimizer_id, "spec": optimizer_spec}
+
+    def delete_optimizer(self, optimizer_id):
+        # Stub implementation: returns deleted optimizer id
+        return {"id": optimizer_id, "status": "deleted"}
+
+    # Hub tool group
+    def list_hub_models(self, filters=None):
+        # Stub implementation: returns example hub model list
+        return [
+            {"name": "ResNet50", "type": "vision", "status": "available"},
+            {"name": "BERT", "type": "nlp", "status": "available"},
+        ]
+
+    def get_hub_model(self, model_id):
+        # Stub implementation: returns example hub model details
+        return {
+            "id": model_id,
+            "name": "ResNet50",
+            "type": "vision",
+            "params": {"pretrained": True},
+        }
+
+    def pull_hub_model(self, model_id):
+        # Stub implementation: returns pulled model info
+        return {"id": model_id, "status": "pulled"}
+
+    def push_hub_model(self, model_spec):
+        # Stub implementation: returns pushed model info
+        return {"id": "hub-456", "spec": model_spec, "status": "pushed"}
